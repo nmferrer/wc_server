@@ -16,42 +16,39 @@
 
 //Handle fetching of external data here.
 
+
+struct WeatherReport {
+    description: String,
+    temperature: i8,
+    icon: String, //path to a resource | ASCII?
+}
 enum Format {
     CLI,
     Web,
     Android,
 }
-struct Request {
-    format: Format,
-    body: String, //Placeholder, should contain content from client.
-}
-struct Response {
-    body: String, //Response should be consistent.
+
+//Database functions
+mod poll_data {
+
 }
 
-//consider impl for struct functions
-
-mod receive {
-    use crate::Format;
-    use crate::Request;
-    use crate::Response;
-
-    fn handle_request(req: &Request) -> Response {
-        //Unpacks request and executes appropriate API calls
-        //returns packet ready for client.
+//Read and write http along data stream
+mod serving {
+    use http::{Request, Response};
+    
+    //review how requests and responses are handled
+    fn respond(req: Request<()>) -> http::Result<Response<()>> {
+        //access fields of req
         
-        let mut result = Response{body: String::from("200")};
-        match req.format {
-            Format::CLI => result = Response{body: String::from("Success")}, //unpack and execute
-                      _ => result = Response{body: String::from("Failure")}, //error handling
-        }
-        return result
+        Ok(Response::default()) //debug
+        
+    }
+    fn send_to_client(res: Response<()>) {
+        //writes to connection specified
     }
 }
 
-mod respond {
-    //fn send_response() -> {}
-}
 
 //ABOVE: Private: Module tree, Internal functions
 //BELOW: Public : Accessible actions
