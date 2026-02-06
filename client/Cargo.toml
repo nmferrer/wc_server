@@ -1,0 +1,11 @@
+[package]
+name = "ws_client_cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "ws_client_cli_bin"
+path = "src/main.rs"
+
+[dependencies]
+clap = "4.5.57"

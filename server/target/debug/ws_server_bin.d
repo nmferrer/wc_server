@@ -1,0 +1,1 @@
+/home/noah/Projects/weather_app/weather_server/server/target/debug/ws_server_bin: /home/noah/Projects/weather_app/weather_server/server/src/lib.rs /home/noah/Projects/weather_app/weather_server/server/src/main.rs
