@@ -1,1 +1,4 @@
 /target
+/client/target
+/server/target
+/db_api/target
