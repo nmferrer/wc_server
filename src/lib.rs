@@ -20,10 +20,8 @@ struct Coordinates {
     latitude: f32,
     longitude: f32,
 }
-//struct Request {}
-//struct Response {}
 
-mod db_access {
+pub mod db_access {
     use sqlx::sqlite:: { SqlitePool };
     use crate::Coordinates;
 
@@ -46,7 +44,7 @@ mod db_access {
         //returns boolean whether attempted query is already in database
     }
 }
-mod weather_api {
+pub mod weather_api {
     use reqwest::header::USER_AGENT;
     use serde_json::Value;
     use crate::ForecastType;

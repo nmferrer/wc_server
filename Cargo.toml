@@ -12,8 +12,10 @@ name = "ws_server_bin"
 path = "src/main.rs"
 
 [dependencies]
-http = "1.4.0"
+reqwest = { version = "0.13", features = ["json"] } 
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.8" , features = ["runtime-tokio", "tls-native-tls", "sqlite"] }
-dotenvy = "0.15"
-anyhow = "1.0"
+anyhow = { version = "1.0" }
+serde = { version = "1.0" , faturues = [ "derive" ]}
+serde_json = { version = "1.0" }
+warp = { version = "0.4", features = ["server"] }
