@@ -3,22 +3,24 @@
 //Execute Query : Send API request. Handle Response.
 //Receive       : Server sends response to user as JSON.
 
-//running as a separate binary for testing
-//integrate as library for server?
+use serde::{Deserialize, Serialize};
 
-enum ForecastType {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum ForecastType {
     Forecast,
     ForecastHourly,
     ForecastGridData,
 }
-struct Input {
-    city: String,
-    state: String,
-    forecast: ForecastType,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Input {
+    pub city: String,
+    pub state: String,
+    pub forecast: ForecastType,
 }
-struct Coordinates {
-    latitude: f32,
-    longitude: f32,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Coordinates {
+    pub latitude: f32,
+    pub longitude: f32,
 }
 
 pub mod db_access {
@@ -39,16 +41,12 @@ pub mod db_access {
             .await?;
         Ok(Coordinates {latitude: city_data.0, longitude: city_data.1})
     }
-
-    pub async fn check_cache() {
-        //returns boolean whether attempted query is already in database
-    }
 }
 pub mod weather_api {
     use reqwest::header::USER_AGENT;
     use serde_json::Value;
     use crate::ForecastType;
-    //OKOK: Given (longitude, lati=tude) -> Retrive (wfo, grid_x, grid_y)
+    //OKOK: Given (longitude, latitude) -> Retrieve (wfo, grid_x, grid_y)
     pub async fn fetch_gridpoint_wfo(client: &reqwest::Client, input: &crate::Input, coordinates: crate::Coordinates) -> anyhow::Result<String> {
         //can be skipped if location cached on local database
         let (lat, lng) = (coordinates.latitude, coordinates.longitude);
@@ -67,7 +65,7 @@ pub mod weather_api {
                 Ok(String::from(v["properties"]["forecastHourly"].as_str().unwrap())),
             ForecastType::ForecastGridData => 
                 Ok(String::from(v["properties"]["forecastGridData"].as_str().unwrap())),
-        } //TODO: Cache onto db to reduce redundant database queries
+        } //TODO: Cache on server to reduce redundant database queries
     }
     pub async fn fetch_forecast(client: &reqwest::Client, forecast_endpoint: String) -> anyhow::Result<()> {
         //API endpoint might be provided by above call, review docs
@@ -76,12 +74,14 @@ pub mod weather_api {
 
         //TODO: Different ways to parse based on {forecast|forecastHourly|forecastGridData}
         let v: Value = serde_json::from_str(&body)?;
-        
         //println!("{:#?}", v["properties"]["periods"].as_array().unwrap()); //DEBUG: See all fields
         for p in v["properties"]["periods"].as_array().unwrap() {
             let p_data = p.as_object().unwrap();
-            println!("{}: {}", p_data["name"].as_str().unwrap(), p_data["detailedForecast"].as_str().unwrap());
-            //{attribute:String : value:String} //FORMAT HERE, trim
+            println!("{}: {}", //verbose
+                p_data["name"].as_str().unwrap(),
+                p_data["detailedForecast"].as_str().unwrap());
+            //TODO: BUILD JSON {name : detailedForecast}
+            
         }
         //OKOK: PARSE: forecastHourly
         //OKOK: PARSE: forecastGridData

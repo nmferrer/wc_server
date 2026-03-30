@@ -1,70 +1,66 @@
-use std::collection::HashMap;
 use warp::Filter;
-use sqlx::sqlite::SqlitePoolOptions;
-use serde::{Deserialize, Serialize};
-use ws_api::{ db_access, weather_api };
-//Initialize connection to database.
-//Listen for client connection attempts.
-//Close on process exit.
+use sqlx::sqlite::{ SqlitePool, SqlitePoolOptions };
+use ws_api::{ Input, db_access, weather_api };
 
 
-//https://github.com/Spades-Ace/RawRustServer/blob/main/src/main.rs
-//mirror implementation of RawRustServer: handling of connections and http protocol
-//modify to handle async tokio constraints
-//https://tokio.rs/tokio/tutorial 
-//use hyper/warp
-//https://users.rust-lang.org/t/processing-http-requests-from-a-tokio-tcpstream/48464
-
-
-
-//API: MODELS, HANDLERS, AND ROUTES
-
-//TODO: WARP: Define model: shape of data
-    //requestForecast
-    //requestForecastWeekly
-    //requestForecastGridData
-#[derive(Debug, Deserialize, Serialize, Clone)]
-struct Request {
+//Database Access + NOAA API Call + Cache
+async fn get_forecast_from_db(recv_input: &ws_api::Input, db_connection: &SqlitePool, client: &reqwest::Client) {
+    //Access db to find lat-long pair
+    //Query by lat-long to find gridpoint weather forecast office 
+    //Query by weather forecast office to fetch forecast[daily|weekly|gridData]
+    let lat_long = db_access::prepare_api_call(db_connection, recv_input).await.unwrap(); //DB access
+    let gridpoint_wfo = weather_api::fetch_gridpoint_wfo(client, recv_input, lat_long).await.unwrap();//API call
+    let forecast = weather_api::fetch_forecast(client, gridpoint_wfo); //API call TODO: UNWRAP OUTPUT? SEND BACK?
     
+    //add lat_long to server cache {city_data:lat_long}
+    forecast.await.expect("Forecast fetched")
 }
-//TODO: WARP: Define handlers: process http request
-    //Database Access + NOAA API Call + Cache
-    //Cached Location + NOAA API Call
-async fn get_forecast_from_db() {
-    //db access
-    //API call
-    //add location to server cache
-}
-async fn get_forecast_cached() {
-    //location requested prior, is on cache (HashMap?)
-    //API call
-}
-//TODO: WARP: Define routes: API endpoints
-    //forecast
-    //forecastWeekly
-    //forecastGridData
-fn routes () {
-
-}
-fn get_forecast() {
-
-}
-fn get_forecast_weekly() {
-
-}
-fn get_forecast_griddata() {
-
-}
-//after above are defined, understand how warp filters work
+//Cached Location + NOAA API Call
+//LOCATION HAS ALREADY BEEN LOGGED BY SERVER
+//SKIP DB LOOKUP, PROCEED TO weather_api
+//async fn get_forecast_cached(recv_input: &ws_api::Input, db_connection: &SqlitePool, client: &reqwest::Client) {}
 
 #[tokio::main]
 async fn main() {
-    //startup:database connection
+    //startup: database connection
     let pool = SqlitePoolOptions::new()
         .max_connections(3)
         .connect("sqlite://data/uscities.db")
-        .await?;
-    let mut location_cache - HashMap::new(); //previously accessed locations
+        .await
+        .expect("Database Connection Established");
+    //startup: reqwest client to poll NOAA
+    let client = reqwest::Client::builder()
+        .build()
+        .expect("HTTP Client Established");
 
-    warp::server(routes).run([127, 0, 0, 1], 8080).await;
+
+    //startup: "cache" to log previously requested locations, reduces db access
+    //let mut location_cache = HashMap::new(); //previously accessed locations
+    //TODO: STORE K-V PAIR (city,state)-(lat_long)
+    //request is made, body contains city_data and forecast type
+
+    let forecast = //current issue: bad request to this endpoint
+        warp::path("forecast")      //endpoint
+        .and(warp::body::content_length_limit(1024 * 32))
+        .and(warp::body::json::<ws_api::Input>()) //clone pool and client here?
+        .then( move |input: Input| {
+            //TODO: is this bad practice? rather, should I consider a open+close new connection instead?
+            let pool_c = pool.clone(); //TODO: INSTEAD: ACQUIRE or BEGIN
+            let client_c = client.clone(); //TODO: INSTEAD: NEW CLIENT?
+            async move {
+                get_forecast_from_db(&input, &pool_c, &client_c).await;
+                println!("Received input: {:?}", input);
+                warp::reply::json(&input) //return JSON of forecast request, check API
+            }
+        });
+    let forecast_weekly = warp::path("forecast_weekly").map(|| format!("forecast_weekly"));
+    let forecast_grid_data = warp::path("forecast_grid_data").map(|| format!("forecast_grid_data"));
+
+    let routes = warp::get().and(
+        forecast
+        .or(forecast_weekly)
+        .or(forecast_grid_data),
+    );
+    println!("Server running on 127.0.0.1:8080");
+    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
 }
