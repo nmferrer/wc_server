@@ -67,35 +67,37 @@ pub mod weather_api {
                 Ok(String::from(v["properties"]["forecastGridData"].as_str().unwrap())),
         } //TODO: Cache on server to reduce redundant database queries
     }
-    pub async fn fetch_forecast(client: &reqwest::Client, forecast_endpoint: String) -> anyhow::Result<()> {
+    pub async fn fetch_forecast(client: &reqwest::Client, forecast_endpoint: String) -> anyhow::Result<Vec<String>> {
         //API endpoint might be provided by above call, review docs
+        let endpoint_last = (&forecast_endpoint.rsplit('/').collect::<Vec<&str>>()[0]).to_string();
         let res = client.get(forecast_endpoint).header(USER_AGENT, "rusty_weather").send().await?;
         let body = res.text().await?;
-
-        //TODO: Different ways to parse based on {forecast|forecastHourly|forecastGridData}
+        let mut forecast = Vec::new();
+        //TODO: Different ways to parse based on {forecast|forecastHourly|forecastGridData};
         let v: Value = serde_json::from_str(&body)?;
-        //println!("{:#?}", v["properties"]["periods"].as_array().unwrap()); //DEBUG: See all fields
-        for p in v["properties"]["periods"].as_array().unwrap() {
+        
+        for p in v["properties"]["periods"].as_array().unwrap() { //forecast
             let p_data = p.as_object().unwrap();
-            println!("{}: {}", //verbose
-                p_data["name"].as_str().unwrap(),
-                p_data["detailedForecast"].as_str().unwrap());
-            //TODO: BUILD JSON {name : detailedForecast}
             
+            if endpoint_last == String::from("forecast") { // weekly /x,y/FORECAST
+                let name = p_data["name"].as_str().unwrap();
+                let detailed_forecast = p_data["detailedForecast"].as_str().unwrap();
+                let name_forecast = format!("{}: {}", name, detailed_forecast); //verbose
+                forecast.push(name_forecast);
+            } else if endpoint_last == String::from("hourly") { // 48hrs /x,y/FORECAST/HOURLY"
+                let time_start = p_data["startTime"].as_str().expect("startTime exists");
+                let time_end = p_data["endTime"].as_str().expect("endTime exists");
+                let temperature = p_data["temperature"].as_i64().expect("temperature exists");
+                let temperature_unit = p_data["temperatureUnit"].as_str().expect("temperature unit exists");
+                let hourly_forecast = format!("{} to {}: {}{}", time_start, time_end, temperature.to_string(), temperature_unit);
+                forecast.push(hourly_forecast); //TODO: TRIM OUTPUT, ONLY LOOP 48HOURS
+            } else {
+                //TODO: handle grid_data   
+            } //should not reach faulty endpoint
         }
-        //OKOK: PARSE: forecastHourly
-        //OKOK: PARSE: forecastGridData
-        Ok(())
-    }
+        Ok(forecast) //return completed vector. Server will serialize as JSON}
 }
-
-
-//OKOK: Confirm working connection
-//TODO: Confirm queries work as intended
-//OKOK: Confirm API calls execute properly. Handle requests and responses.
-//TODO: Error handling. Write tests.
-//Upon completion, rewrite as separate library to be run on server.
-
+}
 
 /* 
 //HOLDOVER FROM TESTING AS A BINARY

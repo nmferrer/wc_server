@@ -4,7 +4,7 @@ use ws_api::{ Input, db_access, weather_api };
 
 
 //Database Access + NOAA API Call + Cache
-async fn get_forecast_from_db(recv_input: &ws_api::Input, db_connection: &SqlitePool, client: &reqwest::Client) {
+async fn get_forecast_from_db(recv_input: &ws_api::Input, db_connection: &SqlitePool, client: &reqwest::Client) -> Vec<String> {
     //Access db to find lat-long pair
     //Query by lat-long to find gridpoint weather forecast office 
     //Query by weather forecast office to fetch forecast[daily|weekly|gridData]
@@ -13,7 +13,7 @@ async fn get_forecast_from_db(recv_input: &ws_api::Input, db_connection: &Sqlite
     let forecast = weather_api::fetch_forecast(client, gridpoint_wfo); //API call TODO: UNWRAP OUTPUT? SEND BACK?
     
     //add lat_long to server cache {city_data:lat_long}
-    forecast.await.expect("Forecast fetched")
+    forecast.await.expect("Forecast fetched") //JSON response of API call
 }
 //Cached Location + NOAA API Call
 //LOCATION HAS ALREADY BEEN LOGGED BY SERVER
@@ -48,9 +48,11 @@ async fn main() {
             let pool_c = pool.clone(); //TODO: INSTEAD: ACQUIRE or BEGIN
             let client_c = client.clone(); //TODO: INSTEAD: NEW CLIENT?
             async move {
-                get_forecast_from_db(&input, &pool_c, &client_c).await;
-                println!("Received input: {:?}", input);
-                warp::reply::json(&input) //return JSON of forecast request, check API
+                println!("Received Request: {:?}", input);
+                let forecast = get_forecast_from_db(&input, &pool_c, &client_c).await;
+                println!("Sending response: {:?}", forecast);
+                warp::reply::json(&forecast)
+                //replies with requested forecast|forecast_hourly|forecast_grid_data
             }
         });
     let forecast_weekly = warp::path("forecast_weekly").map(|| format!("forecast_weekly"));
