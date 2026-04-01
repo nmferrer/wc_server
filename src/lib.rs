@@ -89,66 +89,13 @@ pub mod weather_api {
                 let time_end = p_data["endTime"].as_str().expect("endTime exists");
                 let temperature = p_data["temperature"].as_i64().expect("temperature exists");
                 let temperature_unit = p_data["temperatureUnit"].as_str().expect("temperature unit exists");
-                let hourly_forecast = format!("{} to {}: {}{}", time_start, time_end, temperature.to_string(), temperature_unit);
+                let hourly_forecast = format!("{} to {}: {}{}",
+                    time_start, time_end, temperature.to_string(), temperature_unit);
                 forecast.push(hourly_forecast); //TODO: TRIM OUTPUT, ONLY LOOP 48HOURS
             } else {
                 //TODO: handle grid_data   
             } //should not reach faulty endpoint
         }
         Ok(forecast) //return completed vector. Server will serialize as JSON}
+} //split into cases?
 }
-}
-
-/* 
-//HOLDOVER FROM TESTING AS A BINARY
-//NOW TESTING IN MAIN SERVER BINARY
-use sqlx::sqlite::{ SqlitePoolOptions };
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //Database Connection
-    let pool = SqlitePoolOptions::new()
-        .max_connections(3)
-        .connect("sqlite://data/uscities.db")
-        .await?; //localDB, env variables? 
-    //HTTP Client
-    let client = reqwest::Client::builder()
-        .build()
-        .expect("client built");
-
-    let input0 = Input {
-                city:String::from("Los Angeles"),
-                state:String::from("CA"),
-                forecast:ForecastType::Forecast,
-    };
-    let input1 = Input {
-                city:String::from("San Francisco"),
-                state:String::from("California"),
-                forecast:ForecastType::ForecastHourly,
-    };
-    let input2 = Input {
-                city:String::from("Sacramento"), 
-                state:String::from("CA"), 
-                forecast:ForecastType::ForecastGridData,
-    };
-    //DB Query: city -> long_x,lat_y
-    let c0 = db_access::prepare_api_call(&pool, &input0).await?;
-    let c1 = db_access::prepare_api_call(&pool, &input1).await?;
-    let c2 = db_access::prepare_api_call(&pool, &input2).await?;
-
-    //API Call: long_x,lat_y -> gridpoint, wfo. Cache as needed.
-    let gw0 = weather_api::fetch_gridpoint_wfo(&client, &input0, c0).await?;
-    let gw1 = weather_api::fetch_gridpoint_wfo(&client, &input1, c1).await?;
-    let gw2 = weather_api::fetch_gridpoint_wfo(&client, &input2, c2).await?;
-
-
-    //println!("{}", gw0);
-    //println!("{}", gw1);
-    //println!("{}", gw2);
-
-    weather_api::fetch_forecast(&client, gw0).await?;
-
-    //API Call: gridpoint, wfo, forecastType -> Forecast. Package output for Response body.
-    Ok(())
-}
-
-*/

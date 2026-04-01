@@ -12,7 +12,7 @@ async fn get_forecast_from_db(recv_input: &ws_api::Input, db_connection: &Sqlite
     let gridpoint_wfo = weather_api::fetch_gridpoint_wfo(client, recv_input, lat_long).await.unwrap();//API call
     let forecast = weather_api::fetch_forecast(client, gridpoint_wfo); //API call TODO: UNWRAP OUTPUT? SEND BACK?
     
-    //add lat_long to server cache {city_data:lat_long}
+    //add {(state,city):lat_long} to server cache
     forecast.await.expect("Forecast fetched") //JSON response of API call
 }
 //Cached Location + NOAA API Call
@@ -55,13 +55,14 @@ async fn main() {
                 //replies with requested forecast|forecast_hourly|forecast_grid_data
             }
         });
-    let forecast_weekly = warp::path("forecast_weekly").map(|| format!("forecast_weekly"));
-    let forecast_grid_data = warp::path("forecast_grid_data").map(|| format!("forecast_grid_data"));
-
+    //let forecast_hourly = warp::path("forecast_hourly").map(|| format!("forecast_hourly"));
+    //let forecast_grid_data = warp::path("forecast_grid_data").map(|| format!("forecast_grid_data"));
+    //CONSIDER: I can split forecast, but do I want to? Server handles action by request body.
+    //CONSIDER: Additional endpoint for additional functionality, e.g. comparison, logging
     let routes = warp::get().and(
         forecast
-        .or(forecast_weekly)
-        .or(forecast_grid_data),
+        //.or(forecast_weekly)
+        //.or(forecast_grid_data),
     );
     println!("Server running on 127.0.0.1:8080");
     warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
