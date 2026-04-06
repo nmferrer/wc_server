@@ -39,7 +39,7 @@ async fn main() {
     //TODO: STORE K-V PAIR (city,state)-(lat_long)
     //request is made, body contains city_data and forecast type
 
-    let forecast = //current issue: bad request to this endpoint
+    let forecast =
         warp::path("forecast")      //endpoint
         .and(warp::body::content_length_limit(1024 * 32))
         .and(warp::body::json::<ws_api::Input>()) //clone pool and client here?

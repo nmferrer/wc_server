@@ -1,5 +1,6 @@
 ***rusty_weather: A Web Service for the US National Weather Service API***
 A rust crate made as an exercise in learning the rust language, client-server RESTful practices, and API endpoints.
+For archival purposes only. Database omitted.
 
 As there is no intuitive way to request the weather of a city from the NOAA API Web Service itself (the user must know the weather forecast office of a location and a set of coordinates corresponding to requested location) this tool simplifies the process by enabling lookup of forecast by city and state alone.
 
